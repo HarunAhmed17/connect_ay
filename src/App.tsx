@@ -70,7 +70,8 @@ function Feed() {
     <div>
       {data.feed.map((link) => (
         <div key={link.id}>
-          <a href={link.url}>{link.description}</a>
+          <a href={link.url}>{link.description}</a>:
+          {link.url}
         </div>
       ))}
       <h2>Add a new link</h2>
