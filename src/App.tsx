@@ -1,40 +1,66 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { useQuery, gql, useMutation } from '@apollo/client';
 
-const FEED_QUERY = gql`
+const TEAMS_QUERY = gql`
   query {
-    feed {
+    teams {
       id
-      description
-      url
+      name
+      coach
+      roster
+      city
+      players {
+        id
+        name
+        age
+        position
+      }
     }
   }
 `;
 
-const POST_LINK_MUTATION = gql`
-  mutation PostLink($url: String!, $description: String!) {
-    postLink(url: $url, description: $description) {
+const ADD_TEAM_MUTATION = gql`
+  mutation AddTeam($name: String!, $coach: String!, $roster: Int!, $city: String!) {
+    addTeam(name: $name, coach: $coach, roster: $roster, city: $city) {
       id
-      description
-      url
+      name
+      coach
+      roster
+      city
     }
   }
 `;
 
-function PostLinkForm() {
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [postLink] = useMutation(POST_LINK_MUTATION, {
+const ADD_PLAYER_MUTATION = gql`
+  mutation AddPlayer($name: String!, $age: Int!, $position: String!, $teamId: Int!) {
+    addPlayer(name: $name, age: $age, position: $position, teamId: $teamId) {
+      id
+      name
+      age
+      position
+    }
+  }
+`;
+
+function AddTeamForm() {
+  const [name, setName] = useState('');
+  const [coach, setCoach] = useState('');
+  const [roster, setRoster] = useState(0);
+  const [city, setCity] = useState('');
+  const [addTeam] = useMutation(ADD_TEAM_MUTATION, {
     onCompleted: () => {
-      setUrl('');
-      setDescription('');
+      setName('');
+      setCoach('');
+      setRoster(0);
+      setCity('');
     },
-    refetchQueries: ['feed']
+    refetchQueries: ['teams'],
+    awaitRefetchQueries: true,
   });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    await postLink({ variables: { url, description } });
+    await addTeam({ variables: { name, coach, roster, city } });
   };
 
   return (
@@ -42,17 +68,33 @@ function PostLinkForm() {
       <div>
         <input
           type="text"
-          placeholder="URL"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
       </div>
       <div>
         <input
           type="text"
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Coach"
+          value={coach}
+          onChange={(e) => setCoach(e.target.value)}
+        />
+      </div>
+      <div>
+        <input
+          type="number"
+          placeholder="Roster"
+          value={roster}
+          onChange={(e) => setRoster(parseInt(e.target.value))}
+        />
+      </div>
+      <div>
+        <input
+          type="text"
+          placeholder="City"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
         />
       </div>
       <button type="submit">Submit</button>
@@ -60,24 +102,118 @@ function PostLinkForm() {
   );
 }
 
-function Feed() {
-  const { loading, error, data } = useQuery(FEED_QUERY);
+function AddPlayerForm() {
+  const { loading, error, data } = useQuery(TEAMS_QUERY);
+  const [name, setName] = useState('');
+  const [age, setAge] = useState<number | undefined>(undefined);
+  const [position, setPosition] = useState('');
+  const [teamId, setTeamId] = useState<number | undefined>(undefined);
+  const [errorState, setErrorState] = useState<string | null>(null);
+
+  const [addPlayer] = useMutation(ADD_PLAYER_MUTATION, {
+    onCompleted: () => {
+      setName('');
+      setAge(undefined);
+      setPosition('');
+      setTeamId(undefined);
+      setErrorState(null);
+    },
+    onError: (error) => {
+      setErrorState(error.message);
+    },
+    refetchQueries: ['teams'],
+    awaitRefetchQueries:true,
+  });
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (age === undefined || teamId === undefined) {
+      setErrorState("Age and Team are required");
+      return;
+    }
+    try {
+      await addPlayer({ variables: { name, age, position, teamId } });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <input
+          type="text"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div>
+        <input
+          type="number"
+          placeholder="Age"
+          value={age || ''}
+          onChange={(e) => setAge(parseInt(e.target.value, 10))}
+        />
+      </div>
+      <div>
+        <input
+          type="text"
+          placeholder="Position"
+          value={position}
+          onChange={(e) => setPosition(e.target.value)}
+        />
+      </div>
+      <div>
+        <select value={teamId} onChange={(e) => setTeamId(parseInt(e.target.value))}>
+          <option value="" disabled>Select team</option>
+          {data.teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button type="submit">Add Player</button>
+      {errorState && <p>Error: {errorState}</p>}
+    </form>
+  );
+}
+
+function Teams() {
+  const { loading, error, data } = useQuery(TEAMS_QUERY);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
 
   return (
     <div>
-      {data.feed.map((link) => (
-        <div key={link.id}>
-          <a href={link.url}>{link.description}</a>:
-          {link.url}
+      <h2>Teams</h2>
+      {data.teams.map((team) => (
+        <div key={team.id}>
+          <h3>{team.name}</h3>
+          <p>Coach: {team.coach}</p>
+          <p>Roster: {team.roster}</p>
+          <p>City: {team.city}</p>
+          <h4>Players</h4>
+          <ul>
+            {team.players.map((player) => (
+              <li key={player.id}>
+                {player.name} - {player.age} - {player.position}
+              </li>
+            ))}
+          </ul>
         </div>
       ))}
-      <h2>Add a new link</h2>
-      <PostLinkForm />
+      <h2>Add a Team</h2>
+      <AddTeamForm />
+      <h2>Add a Player</h2>
+      <AddPlayerForm />
     </div>
   );
 }
 
-export default Feed;
+export default Teams;
