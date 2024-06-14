@@ -5,18 +5,29 @@ const typeDefinitions = /* GraphQL */ `
   type Query {
     info: String!
     teams: [Team!]!
+    players: [Player!]!
   }
 
   type Mutation {
     addTeam(name: String!, coach: String!, roster: Int!, city: String!): Team!
+    addPlayer(name: String!, age: Int!, position: String!, teamId: Int!): Player!
   }
- 
+
   type Team {
     id: ID!
     name: String!
     coach: String!
     roster: Int!
     city: String!
+    players: [Player!]!
+  }
+
+  type Player {
+    id: ID!
+    name: String!
+    age: Int!
+    position: String!
+    team: Team!
   }
 `
 
@@ -26,21 +37,35 @@ type Team = {
   coach: string
   roster: number
   city: string
+  players: Player[]
+}
+
+type Player = {
+  id: string
+  name: string
+  age: number
+  position: string
+  team: Team
 }
 
 const resolvers = {
   Query: {
     info: () => `This is the API of a Team management system`,
     teams: async (parent: unknown, args: {}, context: GraphQLContext) => {
-      return context.prisma.team.findMany()
+      return context.prisma.team.findMany({
+        include: { players: true }
+      })
+    },
+    players: async (parent: unknown, args: {}, context: GraphQLContext) => {
+      return context.prisma.player.findMany()
     }
   },
   Team: {
-    id: (parent: Team) => parent.id,
-    name: (parent: Team) => parent.name,
-    coach: (parent: Team) => parent.coach,
-    roster: (parent: Team) => parent.roster,
-    city: (parent: Team) => parent.city
+    players: (parent: Team, args: {}, context: GraphQLContext) => {
+      return context.prisma.player.findMany({
+        where: { teamId: parent.id }
+      })
+    }
   },
   Mutation: {
     async addTeam(
@@ -57,6 +82,21 @@ const resolvers = {
         }
       })
       return newTeam
+    },
+    async addPlayer(
+      parent: unknown,
+      args: { name: string; age: number; position: string; teamId: number },
+      context: GraphQLContext
+    ) {
+      const newPlayer = await context.prisma.player.create({
+        data: {
+          name: args.name,
+          age: args.age,
+          position: args.position,
+          teamId: args.teamId
+        }
+      })
+      return newPlayer
     }
   }
 }

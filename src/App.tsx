@@ -9,6 +9,12 @@ const TEAMS_QUERY = gql`
       coach
       roster
       city
+      players {
+        id
+        name
+        age
+        position
+      }
     }
   }
 `;
@@ -21,6 +27,17 @@ const ADD_TEAM_MUTATION = gql`
       coach
       roster
       city
+    }
+  }
+`;
+
+const ADD_PLAYER_MUTATION = gql`
+  mutation AddPlayer($name: String!, $age: Int!, $position: String!, $teamId: Int!) {
+    addPlayer(name: $name, age: $age, position: $position, teamId: $teamId) {
+      id
+      name
+      age
+      position
     }
   }
 `;
@@ -84,6 +101,55 @@ function AddTeamForm() {
   );
 }
 
+function AddPlayerForm({ teamId }) {
+  const [name, setName] = useState('');
+  const [age, setAge] = useState(0);
+  const [position, setPosition] = useState('');
+  const [addPlayer] = useMutation(ADD_PLAYER_MUTATION, {
+    onCompleted: () => {
+      setName('');
+      setAge(0);
+      setPosition('');
+    },
+    refetchQueries: ['teams']
+  });
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    await addPlayer({ variables: { name, age, position, teamId } });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <input
+          type="text"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div>
+        <input
+          type="number"
+          placeholder="Age"
+          value={age}
+          onChange={(e) => setAge(parseInt(e.target.value))}
+        />
+      </div>
+      <div>
+        <input
+          type="text"
+          placeholder="Position"
+          value={position}
+          onChange={(e) => setPosition(e.target.value)}
+        />
+      </div>
+      <button type="submit">Add Player</button>
+    </form>
+  );
+}
+
 function Teams() {
   const { loading, error, data } = useQuery(TEAMS_QUERY);
 
@@ -99,6 +165,16 @@ function Teams() {
           <p>Coach: {team.coach}</p>
           <p>Roster: {team.roster}</p>
           <p>City: {team.city}</p>
+          <h4>Players:</h4>
+          <ul>
+            {team.players.map((player) => (
+              <li key={player.id}>
+                {player.name} - {player.age} - {player.position}
+              </li>
+            ))}
+          </ul>
+          <h4>Add a new player to {team.name}</h4>
+          <AddPlayerForm teamId={team.id} />
         </div>
       ))}
       <h2>Add a new team</h2>
