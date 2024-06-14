@@ -1,60 +1,66 @@
 import { createSchema } from 'graphql-yoga'
-import { type Link } from '@prisma/client'
 import type { GraphQLContext } from './context'
- 
+
 const typeDefinitions = /* GraphQL */ `
   type Query {
     info: String!
-    feed: [Link!]!
+    teams: [Team!]!
   }
 
   type Mutation {
-    postLink(url: String!, description: String!): Link!
+    addTeam(name: String!, coach: String!, roster: Int!, city: String!): Team!
   }
  
-  type Link {
+  type Team {
     id: ID!
-    description: String!
-    url: String!
+    name: String!
+    coach: String!
+    roster: Int!
+    city: String!
   }
 `
-type Link = {
-    id: string
-    url: string
-    description: string
-  }
-   
 
-   
-  const resolvers = {
-    Query: {
-      info: () => `This is the API of a Hackernews Clone`,
-      feed: async (parent: unknown, args: {}, context: GraphQLContext) => {
-        return context.prisma.link.findMany()
-      }
-    },
-    Link: {
-      id: (parent: Link) => parent.id,
-      description: (parent: Link) => parent.description,
-      url: (parent: Link) => parent.url
-    },
-    Mutation: {
-        async postLink(
-          parent: unknown,
-          args: { description: string; url: string },
-          context: GraphQLContext
-        ) {
-          const newLink = await context.prisma.link.create({
-            data: {
-              url: args.url,
-              description: args.description
-            }
-          })
-          return newLink
+type Team = {
+  id: string
+  name: string
+  coach: string
+  roster: number
+  city: string
+}
+
+const resolvers = {
+  Query: {
+    info: () => `This is the API of a Team management system`,
+    teams: async (parent: unknown, args: {}, context: GraphQLContext) => {
+      return context.prisma.team.findMany()
+    }
+  },
+  Team: {
+    id: (parent: Team) => parent.id,
+    name: (parent: Team) => parent.name,
+    coach: (parent: Team) => parent.coach,
+    roster: (parent: Team) => parent.roster,
+    city: (parent: Team) => parent.city
+  },
+  Mutation: {
+    async addTeam(
+      parent: unknown,
+      args: { name: string; coach: string; roster: number; city: string },
+      context: GraphQLContext
+    ) {
+      const newTeam = await context.prisma.team.create({
+        data: {
+          name: args.name,
+          coach: args.coach,
+          roster: args.roster,
+          city: args.city
         }
+      })
+      return newTeam
     }
   }
- 
+}
+
 export const schema = createSchema({
   resolvers: [resolvers],
   typeDefs: [typeDefinitions]

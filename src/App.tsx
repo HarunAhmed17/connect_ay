@@ -1,40 +1,48 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { useQuery, gql, useMutation } from '@apollo/client';
 
-const FEED_QUERY = gql`
+const TEAMS_QUERY = gql`
   query {
-    feed {
+    teams {
       id
-      description
-      url
+      name
+      coach
+      roster
+      city
     }
   }
 `;
 
-const POST_LINK_MUTATION = gql`
-  mutation PostLink($url: String!, $description: String!) {
-    postLink(url: $url, description: $description) {
+const ADD_TEAM_MUTATION = gql`
+  mutation AddTeam($name: String!, $coach: String!, $roster: Int!, $city: String!) {
+    addTeam(name: $name, coach: $coach, roster: $roster, city: $city) {
       id
-      description
-      url
+      name
+      coach
+      roster
+      city
     }
   }
 `;
 
-function PostLinkForm() {
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [postLink] = useMutation(POST_LINK_MUTATION, {
+function AddTeamForm() {
+  const [name, setName] = useState('');
+  const [coach, setCoach] = useState('');
+  const [roster, setRoster] = useState(0);
+  const [city, setCity] = useState('');
+  const [addTeam] = useMutation(ADD_TEAM_MUTATION, {
     onCompleted: () => {
-      setUrl('');
-      setDescription('');
+      setName('');
+      setCoach('');
+      setRoster(0);
+      setCity('');
     },
-    refetchQueries: ['feed']
+    refetchQueries: ['teams']
   });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    await postLink({ variables: { url, description } });
+    await addTeam({ variables: { name, coach, roster, city } });
   };
 
   return (
@@ -42,17 +50,33 @@ function PostLinkForm() {
       <div>
         <input
           type="text"
-          placeholder="URL"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
       </div>
       <div>
         <input
           type="text"
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Coach"
+          value={coach}
+          onChange={(e) => setCoach(e.target.value)}
+        />
+      </div>
+      <div>
+        <input
+          type="number"
+          placeholder="Roster"
+          value={roster}
+          onChange={(e) => setRoster(parseInt(e.target.value))}
+        />
+      </div>
+      <div>
+        <input
+          type="text"
+          placeholder="City"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
         />
       </div>
       <button type="submit">Submit</button>
@@ -60,24 +84,27 @@ function PostLinkForm() {
   );
 }
 
-function Feed() {
-  const { loading, error, data } = useQuery(FEED_QUERY);
+function Teams() {
+  const { loading, error, data } = useQuery(TEAMS_QUERY);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
 
   return (
-    <div>
-      {data.feed.map((link) => (
-        <div key={link.id}>
-          <a href={link.url}>{link.description}</a>:
-          {link.url}
+    <div className="container">
+      <h2>Teams</h2>
+      {data.teams.map((team) => (
+        <div key={team.id} className="team">
+          <h3>{team.name}</h3>
+          <p>Coach: {team.coach}</p>
+          <p>Roster: {team.roster}</p>
+          <p>City: {team.city}</p>
         </div>
       ))}
-      <h2>Add a new link</h2>
-      <PostLinkForm />
+      <h2>Add a new team</h2>
+      <AddTeamForm />
     </div>
   );
 }
 
-export default Feed;
+export default Teams;
