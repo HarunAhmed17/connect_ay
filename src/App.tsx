@@ -54,7 +54,8 @@ function AddTeamForm() {
       setRoster(0);
       setCity('');
     },
-    refetchQueries: ['teams']
+    refetchQueries: ['teams'],
+    awaitRefetchQueries: true,
   });
 
   const handleSubmit = async (event) => {
@@ -121,6 +122,7 @@ function AddPlayerForm() {
       setErrorState(error.message);
     },
     refetchQueries: ['teams'],
+    awaitRefetchQueries:true,
   });
 
   const handleSubmit = async (event: React.FormEvent) => {
