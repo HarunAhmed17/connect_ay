@@ -88,6 +88,7 @@ const resolvers = {
       args: { name: string; age: number; position: string; teamId: number },
       context: GraphQLContext
     ) {
+      try{
       const newPlayer = await context.prisma.player.create({
         data: {
           name: args.name,
@@ -98,6 +99,11 @@ const resolvers = {
       })
       return newPlayer
     }
+    catch (error) {
+      console.error("Error creating player: ", error);
+      throw new Error("Failed to create player");
+    }}
+    
   }
 }
 

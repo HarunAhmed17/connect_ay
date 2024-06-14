@@ -101,23 +101,43 @@ function AddTeamForm() {
   );
 }
 
-function AddPlayerForm({ teamId }) {
+function AddPlayerForm() {
+  const { loading, error, data } = useQuery(TEAMS_QUERY);
   const [name, setName] = useState('');
-  const [age, setAge] = useState(0);
+  const [age, setAge] = useState<number | undefined>(undefined);
   const [position, setPosition] = useState('');
+  const [teamId, setTeamId] = useState<number | undefined>(undefined);
+  const [errorState, setErrorState] = useState<string | null>(null);
+
   const [addPlayer] = useMutation(ADD_PLAYER_MUTATION, {
     onCompleted: () => {
       setName('');
-      setAge(0);
+      setAge(undefined);
       setPosition('');
+      setTeamId(undefined);
+      setErrorState(null);
     },
-    refetchQueries: ['teams']
+    onError: (error) => {
+      setErrorState(error.message);
+    },
+    refetchQueries: ['teams'],
   });
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    await addPlayer({ variables: { name, age, position, teamId } });
+    if (age === undefined || teamId === undefined) {
+      setErrorState("Age and Team are required");
+      return;
+    }
+    try {
+      await addPlayer({ variables: { name, age, position, teamId } });
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -133,8 +153,8 @@ function AddPlayerForm({ teamId }) {
         <input
           type="number"
           placeholder="Age"
-          value={age}
-          onChange={(e) => setAge(parseInt(e.target.value))}
+          value={age || ''}
+          onChange={(e) => setAge(parseInt(e.target.value, 10))}
         />
       </div>
       <div>
@@ -145,7 +165,18 @@ function AddPlayerForm({ teamId }) {
           onChange={(e) => setPosition(e.target.value)}
         />
       </div>
+      <div>
+        <select value={teamId} onChange={(e) => setTeamId(parseInt(e.target.value))}>
+          <option value="" disabled>Select team</option>
+          {data.teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <button type="submit">Add Player</button>
+      {errorState && <p>Error: {errorState}</p>}
     </form>
   );
 }
@@ -157,15 +188,15 @@ function Teams() {
   if (error) return <p>Error: {error.message}</p>;
 
   return (
-    <div className="container">
+    <div>
       <h2>Teams</h2>
       {data.teams.map((team) => (
-        <div key={team.id} className="team">
+        <div key={team.id}>
           <h3>{team.name}</h3>
           <p>Coach: {team.coach}</p>
           <p>Roster: {team.roster}</p>
           <p>City: {team.city}</p>
-          <h4>Players:</h4>
+          <h4>Players</h4>
           <ul>
             {team.players.map((player) => (
               <li key={player.id}>
@@ -173,12 +204,12 @@ function Teams() {
               </li>
             ))}
           </ul>
-          <h4>Add a new player to {team.name}</h4>
-          <AddPlayerForm teamId={team.id} />
         </div>
       ))}
-      <h2>Add a new team</h2>
+      <h2>Add a Team</h2>
       <AddTeamForm />
+      <h2>Add a Player</h2>
+      <AddPlayerForm />
     </div>
   );
 }
